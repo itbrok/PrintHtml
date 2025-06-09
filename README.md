@@ -46,6 +46,10 @@ Example (custom paper size 77x77 mm, no margins):
 REST server example (listen on port 9090):
 
   PrintHtml -server 9090
+
+Custom size via REST:
+
+  http://localhost:9090/print?url=https://example.com&a=77,77
 ~~~~
 
 ---
@@ -136,4 +140,5 @@ PrintHtml can also run as a lightweight REST service. Start the application with
 `-server [port]` (default `8080`) and it will listen for HTTP requests. Send a
 `GET /print` request with query parameters matching the command line options
 (such as `url`, `printer`, `left`, `top`, etc.) and the requested page will be
-printed.
+printed. Custom paper sizes can be provided using `width` and `height` query
+parameters or the shorthand `a=WIDTH,HEIGHT`.

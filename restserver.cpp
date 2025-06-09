@@ -67,6 +67,18 @@ void RestServer::readClient()
         int pageTo = params.value("pageto", "0").toInt();
         double width = params.value("width", "0").toDouble();
         double height = params.value("height", "0").toDouble();
+        if (params.contains("a") && params.value("a").contains(',')) {
+            QStringList dims = params.value("a").split(',');
+            if (dims.size() == 2) {
+                bool ok1, ok2;
+                double w = dims[0].toDouble(&ok1);
+                double h = dims[1].toDouble(&ok2);
+                if (ok1 && ok2 && w > 0 && h > 0) {
+                    width = w;
+                    height = h;
+                }
+            }
+        }
 
         PrintHtml *job = new PrintHtml(false, true, urls, printer, l, t, r, b, paper, orient, pageFrom, pageTo, width, height, false);
         connect(job, SIGNAL(finished()), job, SLOT(deleteLater()));
