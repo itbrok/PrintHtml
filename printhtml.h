@@ -31,6 +31,8 @@
 
 #include <QObject>
 #include <QCoreApplication>
+#include <QImage>
+#include <QPainter>
 
 class PrintHtml : public QObject
 {
@@ -41,7 +43,8 @@ private:
 public:
     PrintHtml(bool testMode, bool json, QStringList urls, QString selectedPrinter, double leftMargin, double topMargin,
           double rightMargin, double bottomMargin, QString paper, QString orientation, int pageFrom, int pageTo,
-          double paperWidth = 0, double paperHeight = 0, bool exitOnCompletion = true, QTcpSocket *client =0, QByteArray resp="");
+          double paperWidth = 0, double paperHeight = 0, bool exitOnCompletion = true, QTcpSocket *client = 0, QByteArray resp = "",
+          bool scanMode = false, QString outputPath = "");
     void quit();
 
 private:
@@ -68,13 +71,17 @@ private:
     QByteArray      resp;
     bool            testMode;   // True if we are running in test mode
     bool            json;       // True if we want the JSON stdout
+    bool            scanMode;   // True if we are in scan mode
+    QString         outputPath; // Output file path for scanned image
     QStringList     urls;       // List of url to print
     QPrinter        *printer;   // Printer object that we print to
     QWebPage        *webPage;   // QWebPage class for printing
     QString         url;
     QStringList     printed;
     bool            exitOnCompletion; // Whether to exit the app when done
+
+signals:
+    void scanFinished(bool success); // Signal emitted after scan is done (or failed)
 };
 
 #endif // PRINTHTML_H
-  

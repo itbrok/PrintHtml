@@ -19,11 +19,15 @@ to different printers.
 The program is pretty simple and the command line usage is like this:
 
 ~~~~
-Usage: PrintHtml [-test] [-p printer] [-l left] [-t top] [-r right] [-b bottom] [-a paper] [-o orientation] [-pagefrom number] [-pageto number] [-json] <url> [url2]
+Usage: PrintHtml [-test] [-scan] [-output <filepath>] [-p printer] [-l left] [-t top] [-r right] [-b bottom] [-a paper] [-o orientation] [-pagefrom number] [-pageto number] [-json] <url> [url2]
        [-server port]
 
+**Note:** The program operates in one of two modes: Print or Scan. Print-related flags (e.g., `-p`, `-pagefrom`, `-pageto`) are mutually exclusive with Scan-related flags (`-scan`, `-output`).
+
 -test                     - Don't print, just show what would have printed.
--p printer                - Printer to print to. Use 'Default' for default printer.
+-scan                     - Scan the document and save it as an image. This flag activates Scan mode.
+-output <filepath>        - Output file path for the scanned image. (Default: output.png). Used only in Scan mode.
+-p printer                - Printer to print to. Use 'Default' for default printer. This flag activates Print mode.
 -json                     - Optional. Output success and error lists as JSON to stdout (no message boxes).
 -a paper                  - Paper type. Options:
                             • Standard sizes: [A4|A5|Letter]
@@ -149,15 +153,20 @@ shorthand `a=WIDTH,HEIGHT`.
 
 Parameter | Description
 -- | --
-url | Page URL to print (required)
-p | Printer name
+url | Page URL to print/scan (required)
+p | Printer name (for printing)
 a | Paper size (e.g., A4, Letter, or custom WIDTH,HEIGHT in mm)
 l, t, r, b | Margins (in inches, optional)
 o | Orientation (Portrait or Landscape)
-pagefrom, pageto | Print range
+pagefrom, pageto | Print range (for printing)
+output | Output file path for scanned image (for scanning, default: output.png). If `uploadUrl` is provided, the image is saved locally first, then uploaded.
+uploadUrl | URL to upload the scanned image (for scanning, optional). If provided, the image will be POSTed as form-data with the field name "image".
 
-
-<h4>🧪 Example (REST + Custom Size)</h4>
+<h4>🧪 Example (REST Print + Custom Size)</h4>
 <pre><code class="language-http">http://localhost:9090/print?url=https://example.com&amp;p=Default&amp;a=77,77&amp;l=0&amp;t=0&amp;r=0&amp;b=0
+</code></pre>
+
+<h4>🧪 Example (REST Scan)</h4>
+<pre><code class="language-http">http://localhost:9090/scan?url=https://example.com&amp;output=scan.jpg
 </code></pre>
 <hr>

@@ -37,7 +37,8 @@
  */
 PrintHtml::PrintHtml(bool testMode, bool json, QStringList urls, QString selectedPrinter, double leftMargin, double topMargin,
                      double rightMargin, double bottomMargin, QString paper, QString orientation, int pageFrom, int pageTo,
-                     double paperWidth, double paperHeight, bool exitOnCompletion, QTcpSocket *client, QByteArray resp)
+                     double paperWidth, double paperHeight, bool exitOnCompletion, QTcpSocket *client, QByteArray resp,
+                     bool scanMode, QString outputPath)
 {
     // Get the instance of the main application
     app = QCoreApplication::instance();
@@ -89,6 +90,8 @@ PrintHtml::PrintHtml(bool testMode, bool json, QStringList urls, QString selecte
     this->exitOnCompletion = exitOnCompletion;
     this->client = client;
     this->resp = resp;
+    this->scanMode = scanMode;
+    this->outputPath = outputPath;
 }
 
 /*
@@ -139,9 +142,20 @@ void PrintHtml::htmlLoaded(
 {
     if (this->json) {
         if (ok) {
-            // Print the page if not in test mode
-            if (!this->testMode) {
-                webPage->mainFrame()->print(printer);
+            if (this->scanMode) {
+                // Render web page to image and save
+                QImage image(webPage->mainFrame()->contentsSize(), QImage::Format_ARGB32);
+                image.fill(Qt::transparent);
+                QPainter painter(&image);
+                webPage->mainFrame()->render(&painter);
+                painter.end();
+                bool saveSuccess = image.save(this->outputPath);
+                emit scanFinished(saveSuccess); // Emit signal
+            } else {
+                // Print the page if not in test mode
+                if (!this->testMode) {
+                    webPage->mainFrame()->print(printer);
+                }
             }
             printed << this->url;
             if (!loadNextUrl()) {
@@ -192,9 +206,20 @@ void PrintHtml::htmlLoaded(
         }
     } else {
         if (ok) {
-            // Print the page if not in test mode
-            if (!this->testMode) {
-                webPage->mainFrame()->print(printer);
+            if (this->scanMode) {
+                // Render web page to image and save
+                QImage image(webPage->mainFrame()->contentsSize(), QImage::Format_ARGB32);
+                image.fill(Qt::transparent);
+                QPainter painter(&image);
+                webPage->mainFrame()->render(&painter);
+                painter.end();
+                bool saveSuccess = image.save(this->outputPath);
+                emit scanFinished(saveSuccess); // Emit signal
+            } else {
+                // Print the page if not in test mode
+                if (!this->testMode) {
+                    webPage->mainFrame()->print(printer);
+                }
             }
             printed << this->url;
             if (!loadNextUrl()) {

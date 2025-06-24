@@ -62,10 +62,14 @@ int main(
     bool testMode = false;
     bool json = false;
     bool serverMode = false;
+    bool scanMode = false;
+    QString outputPath = "output.png"; // Default output path
     int serverPort = 8080;
     if (argc < 2) {
-        QString usage = "Usage: PrintHtml [-test] [-p printer] [-l left] [-t top] [-r right] [-b bottom] [-a paper] [-o orientation] [-pagefrom number] [-pageto number] [-server port] <url> [url2]\n\n";
+        QString usage = "Usage: PrintHtml [-test] [-scan] [-output <filepath>] [-p printer] [-l left] [-t top] [-r right] [-b bottom] [-a paper] [-o orientation] [-pagefrom number] [-pageto number] [-server port] <url> [url2]\n\n";
         usage += "-test                  \t - Don't print, just show what would have printed.\n \n";
+        usage += "-scan                  \t - Scan the document and save it as an image.\n \n";
+        usage += "-output <filepath>     \t - Output file path for the scanned image. (Default: output.png)\n \n";
         usage += "-p printer             \t - Printer to print to. Use 'Default' for default printer.\n \n";
         usage += "-json                  \t- Optional Stdout array of success and error without MsgBox. \n\n";
         usage += "-l left                \t - Optional left margin for page. (Default 0.5)\n \n";
@@ -92,6 +96,10 @@ int main(
             printer = argv[++i];
         else if (arg == "-test")
             testMode = true;
+        else if (arg == "-scan")
+            scanMode = true;
+        else if (arg == "-output")
+            outputPath = argv[++i];
         else if (arg == "-l")
             leftMargin = atof(argv[++i]);
         else if (arg == "-t")
@@ -173,7 +181,7 @@ int main(
     }
 
     // Create the HTML printer class
-    PrintHtml printHtml(testMode, json, urls, printer, leftMargin, topMargin, rightMargin, bottomMargin, paper, orientation, pageFrom, pageTo, paperWidth, paperHeight, true);
+    PrintHtml printHtml(testMode, json, urls, printer, leftMargin, topMargin, rightMargin, bottomMargin, paper, orientation, pageFrom, pageTo, paperWidth, paperHeight, true, 0, "", scanMode, outputPath);
 
     // Connect up the signals
     QObject::connect(&printHtml, SIGNAL(finished()), &app, SLOT(quit()));

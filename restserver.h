@@ -6,6 +6,8 @@
 #include <QTcpSocket>
 #include "printhtml.h"
 
+class QNetworkAccessManager; // Forward declaration
+
 class RestServer : public QObject
 {
     Q_OBJECT
@@ -16,9 +18,11 @@ public:
 private slots:
     void newConnection();
     void readClient();
+    void uploadImage(const QString &imagePath, const QString &uploadUrl, QTcpSocket *client);
 
 private:
     QTcpServer server;
+    QNetworkAccessManager *networkManager;
 };
 
 #endif // RESTSERVER_H
