@@ -63,22 +63,35 @@ int main(
     bool json = false;
     bool serverMode = false;
     int serverPort = 8080;
+    bool scanMode = false;
+    QString scannerName = "Default";
+    QString outputFile = "";
+    QString uploadUrl = "";
+
     if (argc < 2) {
-        QString usage = "Usage: PrintHtml [-test] [-p printer] [-l left] [-t top] [-r right] [-b bottom] [-a paper] [-o orientation] [-pagefrom number] [-pageto number] [-server port] <url> [url2]\n\n";
-        usage += "-test                  \t - Don't print, just show what would have printed.\n \n";
-        usage += "-p printer             \t - Printer to print to. Use 'Default' for default printer.\n \n";
-        usage += "-json                  \t- Optional Stdout array of success and error without MsgBox. \n\n";
-        usage += "-l left                \t - Optional left margin for page. (Default 0.5)\n \n";
-        usage += "-t top                 \t - Optional top margin for page. (Default 0.5)\n \n";
-        usage += "-r right               \t - Optional right margin for page. (Default 0.5)\n \n";
-        usage += "-b bottom              \t - Optional bottom margin for page. (Default 0.5)\n \n";
-        usage += "-a [A4|A5|Letter|width,height] \t - Optional paper type or custom size in mm. (Default A4)\n\n";
-        usage += "-o [Portrait|Landscape]\t - Optional orientation type. (Default Portrait)\n \n";
-        usage += "-server [port]        \t - Run as REST server on given port (default 8080).\n \n";
-        usage += "-pagefrom number       \t - Optional. Use for setting up the range of pages for printing. Corresponds to the first page in the page range for printing. (Must be used with \"-pageto\" parameter)\n \n";
-        usage += "-pageto number         \t - Optional. Use for setting up the range of pages for printing. Corresponds to the last page in the page range for printing. (Must be used with \"-pagefrom\" parameter)\n \n";
-        usage += "url                    \t - Defines the list of URLs to print, one after the other.\n \n \n";
-        usage += "Note: Pages in a document are numbered according to the convention that the first page is page 1. However, if from and to are both set to 0, the whole document will be printed.";
+        QString usage = "Usage: PrintHtml [options] <url_or_scan_source>\n\n";
+        usage += "Global Options:\n";
+        usage += "  -server [port]        \t - Run as REST server on given port (default 8080).\n";
+        usage += "  -json                 \t - Output success and error lists as JSON to stdout (no message boxes).\n\n";
+        usage += "Print Mode Options (default mode if --scan is not specified):\n";
+        usage += "  <url> [url2...]       \t - Defines the list of URLs to print, one after the other.\n";
+        usage += "  -test                 \t - Don't print, just show what would have printed.\n";
+        usage += "  -p printer            \t - Printer to print to. Use 'Default' for default printer.\n";
+        usage += "  -l left               \t - Optional left margin for page. (Default 0.5 inches)\n";
+        usage += "  -t top                \t - Optional top margin for page. (Default 0.5 inches)\n";
+        usage += "  -r right              \t - Optional right margin for page. (Default 0.5 inches)\n";
+        usage += "  -b bottom             \t - Optional bottom margin for page. (Default 0.5 inches)\n";
+        usage += "  -a [A4|A5|Letter|width,height] \t - Optional paper type or custom size in mm. (Default A4)\n";
+        usage += "  -o [Portrait|Landscape]\t - Optional orientation type. (Default Portrait)\n";
+        usage += "  -pagefrom number      \t - Optional. First page in the page range for printing.\n";
+        usage += "  -pageto number        \t - Optional. Last page in the page range for printing.\n\n";
+        usage += "Scan Mode Options:\n";
+        usage += "  --scan                \t - Enable scanning mode.\n";
+        usage += "  --scanner <name>      \t - Scanner to use. Use 'Default' for default scanner.\n";
+        usage += "  --output-file <path>  \t - File path to save the scanned image.\n";
+        usage += "  --upload-url <url>    \t - URL to upload the scanned image to.\n\n";
+        usage += "Note: Print and Scan modes are mutually exclusive.\n";
+        usage += "Note: For printing, if from and to are both set to 0, the whole document will be printed.\n";
 
         QMessageBox msgBox;
         msgBox.setWindowTitle("PrintHtml Usage");
@@ -130,9 +143,29 @@ int main(
             if (i + 1 < argc && QString(argv[i+1]).at(0) != '-')
                 serverPort = atoi(argv[++i]);
         }
+        else if (arg == "--scan")
+            scanMode = true;
+        else if (arg == "--scanner")
+            scannerName = argv[++i];
+        else if (arg == "--output-file")
+            outputFile = argv[++i];
+        else if (arg == "--upload-url")
+            uploadUrl = argv[++i];
         else
-            urls << arg;
+            urls << arg; // Assuming this might be a source for scanning if not a URL for printing
     }
+
+    if (scanMode && !urls.isEmpty()) {
+        // If --scan is used, urls should not be provided for printing
+        QMessageBox::critical(0, "Argument Error", "Cannot use URL arguments with --scan mode.");
+        return -1;
+    }
+
+    if (scanMode && serverMode) {
+		QMessageBox::critical(0, "Argument Error", "Cannot use --scan mode with -server mode simultaneously from command line.");
+		return -1;
+	}
+
 
     // Find the application directory and store it in our global variable. Note
     // that on MacOS we need to go back three directories to get to the actual
@@ -172,15 +205,41 @@ int main(
         return app.exec();
     }
 
-    // Create the HTML printer class
-    PrintHtml printHtml(testMode, json, urls, printer, leftMargin, topMargin, rightMargin, bottomMargin, paper, orientation, pageFrom, pageTo, paperWidth, paperHeight, true);
+    if (scanMode) {
+        // Placeholder for ScanImage class instantiation and execution
+        // ScanImage scanImage(scannerName, outputFile, uploadUrl, json);
+        // QObject::connect(&scanImage, SIGNAL(finished()), &app, SLOT(quit()));
+        // QObject::connect(&app, SIGNAL(aboutToQuit()), &scanImage, SLOT(aboutToQuitApp()));
+        // QTimer::singleShot(10, &scanImage, SLOT(run()));
+        // For now, just print a message and exit
+        if (!json) {
+            QMessageBox msgBox;
+            msgBox.setWindowTitle("Scan Mode");
+            QString scanParams = QString("Scanner: %1\nOutput File: %2\nUpload URL: %3")
+                                 .arg(scannerName)
+                                 .arg(outputFile.isEmpty() ? "N/A" : outputFile)
+                                 .arg(uploadUrl.isEmpty() ? "N/A" : uploadUrl);
+            msgBox.setText("Scan mode activated (implementation pending).\n" + scanParams);
+            msgBox.exec();
+        } else {
+            // Output JSON indicating scan mode is active but not implemented
+            printf("{\"mode\":\"scan\", \"status\":\"pending_implementation\", \"scanner\":\"%s\", \"output_file\":\"%s\", \"upload_url\":\"%s\"}\n",
+                   scannerName.toStdString().c_str(),
+                   outputFile.toStdString().c_str(),
+                   uploadUrl.toStdString().c_str());
+        }
+        return 0; // Or app.exec() if ScanImage uses QTimer/signals
+    } else {
+        // Create the HTML printer class
+        PrintHtml printHtml(testMode, json, urls, printer, leftMargin, topMargin, rightMargin, bottomMargin, paper, orientation, pageFrom, pageTo, paperWidth, paperHeight, true);
 
-    // Connect up the signals
-    QObject::connect(&printHtml, SIGNAL(finished()), &app, SLOT(quit()));
-    QObject::connect(&app, SIGNAL(aboutToQuit()), &printHtml, SLOT(aboutToQuitApp()));
+        // Connect up the signals
+        QObject::connect(&printHtml, SIGNAL(finished()), &app, SLOT(quit()));
+        QObject::connect(&app, SIGNAL(aboutToQuit()), &printHtml, SLOT(aboutToQuitApp()));
 
-    // This code will start the messaging engine in QT and in
-    // 10ms it will start the execution in the PrintHtml.run routine;
-    QTimer::singleShot(10, &printHtml, SLOT(run()));
-    return app.exec();
+        // This code will start the messaging engine in QT and in
+        // 10ms it will start the execution in the PrintHtml.run routine;
+        QTimer::singleShot(10, &printHtml, SLOT(run()));
+        return app.exec();
+    }
 }

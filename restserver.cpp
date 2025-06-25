@@ -1,6 +1,7 @@
 #include "restserver.h"
 #include <QUrl>
 #include <QTimer>
+#include "scanimage.h" // Added for ScanImage functionality
 
 RestServer::RestServer(QObject *parent)
     : QObject(parent)
@@ -103,7 +104,51 @@ void RestServer::readClient()
         connect(job, SIGNAL(finished()), job, SLOT(deleteLater()));
         QTimer::singleShot(0, job, SLOT(run()));
 
-        
+    } else if (endpoint == "/scan") {
+        // Parameters for scanning
+        QString scannerName = params.value("scanner", "Default");
+        QString outputFile = params.value("output_file", "");
+        QString uploadUrl = params.value("upload_url", "");
+        bool jsonOutput = true; // REST server implies JSON output for scan results
+
+        // Prepare initial response
+        // Unlike print, the full scan result (success/failure, paths) will be handled by ScanImage's own JSON output.
+        // The REST server will just acknowledge the request.
+        // However, ScanImage is currently designed to print JSON to stdout.
+        // For a true REST API, ScanImage would need to return its JSON data to RestServer
+        // or RestServer would need to capture stdout if ScanImage is run in a separate process.
+        // For now, we'll assume ScanImage's direct JSON output is acceptable for the use case,
+        // and the client will receive a simple ack then wait for ScanImage's own output (if applicable, or check logs).
+        // This is a point of potential redesign if ScanImage's output needs to be part of the HTTP response body.
+
+        QByteArray resp = "HTTP/1.1 202 Accepted\r\nContent-Type: application/json\r\n\r\n";
+        resp += "{\"status\":\"scan_initiated\",";
+        resp += "\"scanner\":\"" + QUrl::toPercentEncoding(scannerName) + "\",";
+        if (!outputFile.isEmpty()) {
+            resp += "\"output_file\":\"" + QUrl::toPercentEncoding(outputFile) + "\",";
+        }
+        if (!uploadUrl.isEmpty()) {
+            resp += "\"upload_url\":\"" + QUrl::toPercentEncoding(uploadUrl) + "\",";
+        }
+        // Remove trailing comma if any
+        if (resp.endsWith(',')) {
+            resp.chop(1);
+        }
+        resp += "}\r\n";
+        client->write(resp);
+        client->disconnectFromHost(); // Disconnect after sending ack; ScanImage runs async
+
+        // Create and run the scan job
+        // Note: ScanImage currently prints JSON to stdout. This might not be what a REST client expects.
+        // A more robust solution would involve ScanImage emitting a signal with the JSON data,
+        // which RestServer would then send back to the client.
+        // However, sticking to current ScanImage design for this step.
+        ScanImage *scanJob = new ScanImage(scannerName, outputFile, uploadUrl, jsonOutput);
+        // Make sure ScanImage deletes itself after it's done if it's not managed by a client socket response
+        QObject::connect(scanJob, &ScanImage::finished, scanJob, &QObject::deleteLater);
+        QObject::connect(scanJob, &ScanImage::errorOccurred, scanJob, &QObject::deleteLater); // Also delete on error
+        QTimer::singleShot(0, scanJob, SLOT(run())); // Run immediately in the event loop
+
     } else {
         client->write("HTTP/1.1 404 Not Found\r\n\r\n");
         client->disconnectFromHost();

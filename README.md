@@ -19,37 +19,97 @@ to different printers.
 The program is pretty simple and the command line usage is like this:
 
 ~~~~
-Usage: PrintHtml [-test] [-p printer] [-l left] [-t top] [-r right] [-b bottom] [-a paper] [-o orientation] [-pagefrom number] [-pageto number] [-json] <url> [url2]
-       [-server port]
+Usage: PrintHtml [mode_options] [global_options]
 
--test                     - Don't print, just show what would have printed.
--p printer                - Printer to print to. Use 'Default' for default printer.
--json                     - Optional. Output success and error lists as JSON to stdout (no message boxes).
--a paper                  - Paper type. Options:
-                            • Standard sizes: [A4|A5|Letter]
-                            • Custom size: width,height in millimeters (e.g., 77,77)
--l left                   - Optional left margin (default: 0.5 inches).
--t top                    - Optional top margin (default: 0.5 inches).
--r right                  - Optional right margin (default: 0.5 inches).
--b bottom                 - Optional bottom margin (default: 0.5 inches).
--o [Portrait|Landscape]   - Optional page orientation (default: Portrait).
--pagefrom [page number]   - Optional. Start page number for printing range.
--pageto [page number]     - Optional. End page number for printing range.
-                            (Must be used together with -pagefrom)
- -server [port]           - Start REST server on the given port.
-url                       - One or more URLs to print (space-separated).
+Global Options:
+  -server [port]        - Run as REST server on given port (default 8080).
+                          When in server mode, specific print or scan operations are triggered via HTTP requests.
+  -json                 - Output success and error information as JSON to stdout (no message boxes).
+                          This applies to command-line print or scan operations.
 
-Example (custom paper size 77x77 mm, no margins):
+The application operates in one of two modes: Print Mode or Scan Mode. These modes are mutually exclusive.
 
+---
+
+### Print Mode (Default)
+
+Prints HTML pages from URLs. This is the default mode if `--scan` is not specified.
+
+Command Line Options for Print Mode:
+  <url> [url2...]       - One or more URLs to print (space-separated). Required if not in server mode.
+  -test                 - Don't print, just show what would have printed.
+  -p printer            - Printer to print to. Use 'Default' for default printer.
+  -l left               - Optional left margin (default: 0.5 inches).
+  -t top                - Optional top margin (default: 0.5 inches).
+  -r right              - Optional right margin (default: 0.5 inches).
+  -b bottom             - Optional bottom margin (default: 0.5 inches).
+  -a paper              - Paper type. Options:
+                          • Standard sizes: [A4|A5|Letter]
+                          • Custom size: width,height in millimeters (e.g., 77,77)
+  -o [Portrait|Landscape] - Optional page orientation (default: Portrait).
+  -pagefrom [number]    - Optional. Start page number for printing range.
+  -pageto [number]      - Optional. End page number for printing range. (Must be used with -pagefrom)
+
+Example (Print HTML with custom paper size 77x77 mm, no margins):
   PrintHtml -p "YourPrinterName" -a "77,77" -l 0 -r 0 -t 0 -b 0 "https://example.com"
 
-REST server example (listen on port 9090):
+---
 
+### Scan Mode
+
+Scans a document from a connected scanner device. The output can be saved to a local file and/or uploaded to a specified URL.
+
+Command Line Options for Scan Mode:
+  --scan                - Activates scan mode.
+  --scanner <name>      - Specifies the scanner device to use (e.g., "MyScanner").
+                          Use "Default" for the system's default scanner. (Default: "Default")
+  --output-file <path>  - Specifies the full file path to save the scanned image (e.g., "C:/scans/image.png").
+                          If not provided, the image is not saved locally.
+  --upload-url <url>    - Specifies a URL to which the scanned image will be uploaded as a POST request (form-data, field name "image").
+                          If not provided, the image is not uploaded.
+
+Example (Scan from default scanner, save locally, and upload):
+  PrintHtml --scan --output-file "scan_result.png" --upload-url "http://example.com/upload_scan"
+
+Note: You must specify at least `--output-file` or `--upload-url` in scan mode for the scanned image to be processed.
+
+---
+
+REST server example (listen on port 9090):
   PrintHtml -server 9090
 
-Custom size via REST:
+Once the server is running, you can send HTTP GET requests to the following endpoints.
+**Note:** Print and Scan operations are mutually exclusive. The server handles one type of request at a time.
 
-  http://localhost:9090/print?url=https://example.com&a=77,77
+#### Print Endpoint (`/print`)
+
+Parameters for `/print`:
+  url                   - Page URL to print (required).
+  p                     - Printer name.
+  a                     - Paper size (e.g., A4, Letter, or custom WIDTH,HEIGHT in mm).
+  l, t, r, b            - Margins (in inches, optional).
+  o                     - Orientation (Portrait or Landscape).
+  pagefrom, pageto      - Print range.
+
+Example (Print via REST with custom size):
+  `http://localhost:9090/print?url=https://example.com&a=77,77`
+
+#### Scan Endpoint (`/scan`)
+
+Parameters for `/scan`:
+  scanner               - Name of the scanner to use (e.g., "Default", "MyScanner"). (Optional, default: "Default")
+  output_file           - Full local path to save the scanned image. (Optional)
+                          Example: `C%3A%2Fscans%2Fimage.png` (URL encoded path)
+  upload_url            - URL to upload the scanned image to. (Optional)
+                          Example: `http%3A%2F%2Fexample.com%2Fupload` (URL encoded)
+
+At least one of `output_file` or `upload_url` should be provided for a meaningful operation.
+
+Example (Scan via REST, save to a file, and upload to a URL):
+  `http://localhost:9090/scan?scanner=MyScanner&output_file=C%3A%2Fscans%2Fscan.png&upload_url=http%3A%2F%2Fmyserver.com%2Fuploader`
+
+The server will respond with a `202 Accepted` and initiate the scan. The detailed outcome of the scan operation (success/failure, file paths/upload status) will be logged by the server application. If the server was started with the `-json` flag, this detailed outcome will also be printed as a JSON string to the server's standard output. This means the HTTP client receives an acknowledgment, and the full status is available on the server side.
+
 ~~~~
 
 ---
