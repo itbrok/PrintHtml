@@ -22,6 +22,7 @@ public:
     ScanImage(const QString& scannerName, const QString& outputFile, const QString& uploadUrl, bool jsonOutput, QObject *parent = nullptr);
     ~ScanImage();
 
+public: // Make signals public
 signals:
     void finished(); // Signal emitted when scanning (and subsequent operations) are complete
     void errorOccurred(const QString& errorMessage); // Signal for errors
